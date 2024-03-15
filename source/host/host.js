@@ -17,10 +17,10 @@ electronApp.whenReady().then(() => {
     const icon = path.join(__dirname, '../../images/icon.png');
     tray = new Tray(icon);
     tray.setToolTip('Keyboard over Network to TTS');
-    setTray();
 
     // Network
     checkConnectionStatus();
+    setTray();
     setInterval(() => { 
         checkConnectionStatus();
         setTray();
@@ -129,7 +129,7 @@ function loadSettings() {
                 console.log(queryOutputDevices);
 
                 if (queryOutputDevices.includes(outputDevice)) {
-                    command += ` -n "${outputDevice}"`;
+                    command += ` -r "${outputDevice}"`;
 
                     console.log(`Output device "${outputDevice}".`);
                 }
@@ -160,8 +160,12 @@ function startExpressApp() {
         console.log(request.body);
     
         nodeCmd.run(
-            command += ` -t "${request.body}"`, 
-            (err, data, stderr) => console.log(data)
+            `${command} -t "${request.body}"`, 
+            (err, data, stderr) => {
+                if (err) {
+                    console.log(err);
+                }
+            }
         );
     
         response.sendStatus(200);
