@@ -103,7 +103,6 @@ function loadSettings() {
     // Voice
     readFile(path.join(__dirname, '../../settings/voice.txt'), 'utf-8', (err, txt) => {
         if (txt === '') {
-            voice = 'David';
             return;
         }
         
