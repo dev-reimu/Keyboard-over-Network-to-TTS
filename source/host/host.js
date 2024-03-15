@@ -5,7 +5,8 @@ const { readFile } = require('fs');
 const express = require('express');
 const cors = require('cors');
 
-const nodeCmd = require('node-cmd');
+const { exec } = require('child_process');
+
 
 
 
@@ -158,12 +159,17 @@ function startExpressApp() {
     
     expressApp.post('/input', (request, response) => {
         console.log(request.body);
-    
-        nodeCmd.run(
+
+        exec(
             `${command} -t "${request.body}"`, 
-            (err, data, stderr) => {
+            (err, stdout, stderr) => {
                 if (err) {
                     console.log(err);
+                    return;
+                }
+                if (stderr) {
+                    console.log(stderr);
+                    return;
                 }
             }
         );
