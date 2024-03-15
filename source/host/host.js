@@ -156,7 +156,7 @@ function startExpressApp() {
         response.sendFile(path.join(__dirname, '../client/client.html'), 'text/html');
     });
     
-    expressApp.post('/input', async (request, response) => {
+    expressApp.post('/input', (request, response) => {
         console.log(request.body);
     
         nodeCmd.run(
