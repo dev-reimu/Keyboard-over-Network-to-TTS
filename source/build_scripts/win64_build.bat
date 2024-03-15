@@ -1,0 +1,1 @@
+electron-packager ..\..\. PK2DC --platform=win32 --arch=x64
