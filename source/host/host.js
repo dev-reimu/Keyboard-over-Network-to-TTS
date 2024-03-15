@@ -1,47 +1,47 @@
-const { app, Menu, Tray } = require('electron');
+const { app: electronApp, Menu, Tray } = require('electron');
 const path = require('path');
 
-const { readFile } = require('fs').promises;
+const { readFile } = require('fs');
 const express = require('express');
 const cors = require('cors');
 
-const { keyboard, Key } = require('@nut-tree/nut-js');
-keyboard.config.autoDelayMs = 5;
+const nodeCmd = require('node-cmd');
 
 
 
 
+let tray;
 
-const expressApp = express();
-expressApp.use(express.text());
-expressApp.use(express.urlencoded({ extended: true }));
-expressApp.use(express.static(path.join(__dirname, '../client')));
-expressApp.use( cors({ origin: '*' }) );
-
-
-
-
-
-let icon = '';
-let tray = null;
-
-app.whenReady().then(() => {
-    icon = path.join(__dirname, '../../images/icon.png');
+electronApp.whenReady().then(() => {
+    // Tray
+    const icon = path.join(__dirname, '../../images/icon.png');
     tray = new Tray(icon);
-    tray.setToolTip('Phone Keyboard to Balabolka');
-    
+    tray.setToolTip('Keyboard over Network to TTS');
     setTray();
+
+    // Network
+    checkConnectionStatus();
+    setInterval(() => { 
+        checkConnectionStatus();
+        setTray();
+    }, 10000);
+
+    // App
+    loadSettings();
+    startExpressApp();
 });
 
 
 
 
 
+// Tray
+
 function setTray() {
     const contextMenu = Menu.buildFromTemplate([ 
         { label: `IP: ${IP_ADDRESS}` }, 
         { label: `PORT: ${PORT}` }, 
-        { label: 'Shutdown', click: () => app.exit() }
+        { label: 'Shutdown', click: () => electronApp.exit() }
     ]);
     
     tray.setContextMenu(contextMenu);
@@ -50,6 +50,11 @@ function setTray() {
 
 
 
+
+// Network
+
+let IP_ADDRESS = 'No Router';
+let PORT = 7979;
 
 function getIPAddress() {
     var interfaces = require('os').networkInterfaces();
@@ -65,27 +70,6 @@ function getIPAddress() {
     return '0.0.0.0';
 }
 
-
-
-
-
-let IP_ADDRESS = 'No Router';
-let PORT = 6969;
-
-
-
-
-
-checkConnectionStatus();
-setInterval(() => { 
-    checkConnectionStatus();
-    setTray();
-}, 10000);
-
-
-
-
-
 function checkConnectionStatus() {
     let NEW_IP_ADDRESS = getIPAddress();
 
@@ -100,42 +84,91 @@ function checkConnectionStatus() {
     }
 
     IP_ADDRESS = NEW_IP_ADDRESS;
-    expressApp.listen(PORT, IP_ADDRESS, () => console.log(`App available at http://${IP_ADDRESS}:${PORT}.`));
+    if (expressApp) {
+        expressApp.listen(PORT, IP_ADDRESS, () => console.log(`App available at http://${IP_ADDRESS}:${PORT}.`));
+    }
     return true;
 }
 
 
 
 
+// App
 
-expressApp.get('/', (request, response) => {
-    response.sendFile(path.join(__dirname, '../client/client.html'), 'text/html');
-});
+let voice = '';
+let outputDevice = '';
+let command = 'cd balcon && balcon.exe -s 0 -v 100';
 
-expressApp.post('/input', async (request, response) => {
-    console.log(request.body);
+function loadSettings() {
+    // Voice
+    readFile(path.join(__dirname, '../../settings/voice.txt'), 'utf-8', (err, txt) => {
+        if (txt === '') {
+            voice = 'David';
+            return;
+        }
+        
+        voice = txt;
+        
+        command += ` -n "${voice}"`;
+        
+        console.log(`Voice: ${voice}.`);
+    });
 
-    await keyboard.type(request.body);
+    // Output Device
+    readFile(path.join(__dirname, '../../settings/output-device.txt'), 'utf-8', (err, txt) => {
+        outputDevice = txt;
+        
+        if (outputDevice === '') {
+            return;
+        }
 
-    response.sendStatus(200);
-});
+        let queryOutputDevices = '';
+        nodeCmd.run(
+            `cd balcon && balcon.exe -g`, 
+            (err, data, stderr) => {
+                queryOutputDevices = data;
+                console.log(queryOutputDevices);
 
-expressApp.post('/enter', async (request, response) => {
-    console.log('Enter');
+                if (queryOutputDevices.includes(outputDevice)) {
+                    command += ` -n "${outputDevice}"`;
 
-    await keyboard.pressKey(Key.Enter);
-    await keyboard.releaseKey(Key.Enter);
+                    console.log(`Output device "${outputDevice}".`);
+                }
+                else {
+                    electronApp.exit();
+                }
+            }
+        );
+    });
+}
 
-    response.sendStatus(200);
-});
 
 
-expressApp.post('/backspace', async (request, response) => {
-    console.log('Backspace');
 
-    await keyboard.pressKey(Key.Backspace);
-    await keyboard.releaseKey(Key.Backspace);
 
-    response.sendStatus(200);
-});
+let expressApp;
 
+function startExpressApp() {
+    expressApp = express();
+    expressApp.use(express.text());
+    expressApp.use(express.urlencoded({ extended: true }));
+    expressApp.use(express.static(path.join(__dirname, '../client')));
+    expressApp.use( cors({ origin: '*' }) );
+
+    expressApp.listen(PORT, IP_ADDRESS, () => console.log(`App available at http://${IP_ADDRESS}:${PORT}.`));
+
+    expressApp.get('/', (request, response) => {
+        response.sendFile(path.join(__dirname, '../client/client.html'), 'text/html');
+    });
+    
+    expressApp.post('/input', async (request, response) => {
+        console.log(request.body);
+    
+        nodeCmd.run(
+            command += ` -t "${request.body}"`, 
+            (err, data, stderr) => console.log(data)
+        );
+    
+        response.sendStatus(200);
+    });
+}

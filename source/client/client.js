@@ -8,11 +8,37 @@ keyboardInputField.focus();
 // Networking
 
 let IP_ADDRESS = new URL(window.location.href).hostname.replace('www.','');
-let PORT = 6969;
+let PORT = 7979;
 
 function throwConnectionError() {
     window.alert(`Failed to send message to ${IP_ADDRESS} on port ${PORT}.`);
 }
+
+
+
+
+// Countdown
+
+const maxCountdown = 2;
+let currentCountdown;
+
+function resetCountdown() {
+    currentCountdown = maxCountdown;
+}
+
+function countdown() {
+    if (keyboardInputField.value === '') {
+        return;
+    }
+
+    currentCountdown -= 1;
+
+    if (currentCountdown <= 0) {
+        sendText(keyboardInputField.value);
+        keyboardInputField.value = '';
+    }
+}
+setInterval(() => { countdown() }, 1000);
 
 
 
@@ -25,9 +51,7 @@ keyboardInputField.addEventListener('input', (event) => {
         return;
     }
 
-    sendText(keyboardInputField.value);
-
-    keyboardInputField.value = '';
+    resetCountdown();
 });
 
 keyboardInputField.addEventListener('paste', (event) => {
@@ -38,18 +62,7 @@ keyboardInputField.addEventListener('paste', (event) => {
         return;
     }
 
-    sendText(keyboardInputField.value);
-
-    keyboardInputField.value = '';
-});
-
-keyboardInputField.addEventListener('keydown', function (event) {
-    if (event.key === 'Backspace') {
-        sendBackspaceKey();
-    }
-    else if (event.key === 'Enter') {
-        sendEnterKey();
-    }
+    resetCountdown();
 });
 
 
@@ -67,38 +80,6 @@ function sendText(text) {
             'Content-Type': 'text/plain'
         }, 
         body: text
-    })
-    .then(res => {
-        if (res.status !== 200) {
-            throwConnectionError();
-        }
-    })
-    .catch(_ => {
-        throwConnectionError();
-    });
-}
-
-function sendEnterKey() {
-    console.log('Sending "Enter" key...');
-
-    fetch(`http://${IP_ADDRESS}:${PORT}/enter`, {
-        method: 'POST'
-    })
-    .then(res => {
-        if (res.status !== 200) {
-            throwConnectionError();
-        }
-    })
-    .catch(_ => {
-        throwConnectionError();
-    });
-}
-
-function sendBackspaceKey() {
-    console.log('Sending "Backspace" key...');
-
-    fetch(`http://${IP_ADDRESS}:${PORT}/backspace`, {
-        method: 'POST'
     })
     .then(res => {
         if (res.status !== 200) {
