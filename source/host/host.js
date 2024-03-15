@@ -142,10 +142,6 @@ function loadSettings() {
     });
 }
 
-
-
-
-
 let expressApp;
 
 function startExpressApp() {
