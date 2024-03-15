@@ -125,10 +125,19 @@ function loadSettings() {
         }
 
         let queryOutputDevices = '';
-        nodeCmd.run(
-            `cd balcon && balcon.exe -g`, 
-            (err, data, stderr) => {
-                queryOutputDevices = data;
+        exec(
+            `${pathToBalcon} -g`, 
+            (err, stdout, stderr) => {
+                if (err) {
+                    console.log(err);
+                    return;
+                }
+                if (stderr) {
+                    console.log(stderr);
+                    return;
+                }
+
+                queryOutputDevices = stdout;
                 console.log(queryOutputDevices);
 
                 if (queryOutputDevices.includes(outputDevice)) {
