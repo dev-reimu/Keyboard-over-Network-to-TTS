@@ -98,7 +98,9 @@ function checkConnectionStatus() {
 
 let voice = '';
 let outputDevice = '';
-let command = 'cd balcon && balcon.exe -s 0 -v 100';
+
+const pathToBalcon = path.join(__dirname + '../../../balcon/balcon.exe');
+let command = pathToBalcon;
 
 function loadSettings() {
     // Voice
